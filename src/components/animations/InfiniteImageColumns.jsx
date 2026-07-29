@@ -26,25 +26,32 @@ const InfiniteImageColumns = forwardRef(function InfiniteImageColumns(
         startLoop: () => {
             trackRefs.current.forEach((track, i) => {
                 if (!track) return;
+                if (tweens.current[i] && tweens.current[i].isActive()) return;
+
+                const distance = track.scrollHeight / 2;
+
+                // kill the old tween WITHOUT touching y — track stays
+                // exactly where it was frozen
                 tweens.current[i]?.kill();
-                // measured now, after the gap tween has finished, so row-gap
-                // is already at its final value and this height is accurate
-                const setHeight = track.scrollHeight / 2;
-                tweens.current[i] = gsap.fromTo(
-                    track,
-                    { y: -setHeight },
-                    {
-                        y: 0,
-                        duration: 20 + i * 4,
-                        ease: "none",
-                        repeat: -1,
-                    }
-                );
+
+                // "-=distance" is relative to the CURRENT y, so this
+                // continues from the frozen position, never resets to 0
+                tweens.current[i] = gsap.to(track, {
+                    y: `-=${distance}`,
+                    duration: 20 + i * 4,
+                    ease: "none",
+                    repeat: -1,
+                    modifiers: {
+                        // re-wraps every frame instead of snapping once
+                        // per lap — this is what makes it seamless
+                        y: gsap.utils.unitize((y) => parseFloat(y) % distance),
+                    },
+                });
             });
         },
         stopLoop: () => {
-            tweens.current.forEach((tw) => tw?.kill());
-            trackRefs.current.forEach((track) => track && gsap.set(track, { y: 0 }));
+            // freeze in place — no reset, so reversing never jumps
+            tweens.current.forEach((tw) => tw?.pause());
         },
     }));
 

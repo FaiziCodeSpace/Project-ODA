@@ -32,7 +32,7 @@ export default function Phase2() {
         gsap.set(content, {
             borderWidth: "6px",
             borderStyle: "solid",
-            borderColor: "rgba(255, 255, 255, 0)",
+            borderColor: "#000000",
         });
 
         const ctx = gsap.context(() => {
@@ -67,8 +67,12 @@ export default function Phase2() {
                 });
             }
 
+            // Snap stops for each slide transition only — deliberately excludes
+            // a stop at slidesFraction (the instant the last slide finishes),
+            // so the scroll flows straight from the last slide into the
+            // scale-down instead of freezing right before it starts.
             const snapPoints = [
-                ...Array.from({ length: last + 1 }, (_, i) => i * stepSize),
+                ...Array.from({ length: last }, (_, i) => i * stepSize),
                 1,
             ];
 
@@ -78,6 +82,7 @@ export default function Phase2() {
                 end: `+=${totalDistance}`,
                 pin: true,
                 scrub: 1,
+                anticipatePin: 1,
                 snap: {
                     snapTo: (progress) =>
                         snapPoints.reduce((closest, p) =>
@@ -95,15 +100,13 @@ export default function Phase2() {
 
     return (
         <section ref={sectionRef} className="bg-black w-full min-h-screen relative overflow-hidden">
-            {/* layer 1: background — oversized + centered so it bleeds past every edge */}
             <div className="absolute inset-0 z-0 flex items-center justify-center overflow-hidden">
                 <div className="scale-125 origin-center">
                     <InfiniteImageColumns ref={bgRef} />
                 </div>
             </div>
 
-            {/* layer 2: content — solid black at rest, hides layer 1 until it scales down */}
-            <div ref={contentRef} className="bg-black relative z-10 w-full min-h-screen">
+            <div id="phase2-content" ref={contentRef} className="bg-black relative z-10 w-full min-h-screen">
                 <div className="relative flex items-center justify-between px-20 pt-12 text-neutral-500 text-[11px]">
                     <div>
                         <p>
