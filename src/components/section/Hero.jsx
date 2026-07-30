@@ -3,12 +3,14 @@
 
 import Phase2 from "../phases/Home/Phase2";
 import Phase3 from "../phases/Home/Phase3";
+import Phase4 from "../phases/Home/Phase4";
 
 export function Hero() {
     return (
         <main className="bg-black relative">
             <Phase2 />
             <Phase3 />
+            <Phase4/>
         </main>
     );
 }

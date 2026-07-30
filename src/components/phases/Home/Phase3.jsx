@@ -1,9 +1,11 @@
+// src/components/phases/Home/Phase3.jsx
 "use client";
 
 import { useEffect, useRef } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import Button from "@/components/ui/Button";
+import BlurText from "@/components/animations/BlurText";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -26,13 +28,22 @@ export default function Phase3() {
                 scrub: true,
             },
         });
-
         tl.to(
             section,
             {
                 borderTopLeftRadius: 0,
                 borderTopRightRadius: 0,
+                duration: 0.8,
+                ease: "none",
+            },
+            0
+        );
+
+        tl.to(
+            section,
+            {
                 marginTop: -200,
+                duration: 1,
                 ease: "none",
             },
             0
@@ -43,6 +54,7 @@ export default function Phase3() {
                 phase2Content,
                 {
                     scale: 0.4,
+                    duration: 1,
                     ease: "none",
                 },
                 0
@@ -187,8 +199,6 @@ export default function Phase3() {
 
             layer.appendChild(el);
 
-            // GSAP owns the full transform stack so later tweens
-            // (scale) don't clobber xPercent/yPercent/rotation.
             gsap.set(el, {
                 xPercent: -50,
                 yPercent: -50,
@@ -252,23 +262,31 @@ export default function Phase3() {
             ref={sectionRef}
             className="relative z-[999] bg-[#F3F3F3] rounded-t-[50px] min-h-screen px-20 overflow-hidden"
         >
-            <div ref={plusLayerRef} className="absolute inset-0" />
-            <div ref={cursorLayerRef} className="absolute inset-0 pointer-events-none" />
+            <div ref={plusLayerRef} className="absolute inset-0 z-0" />
+            <div ref={cursorLayerRef} className="absolute inset-0 z-0 pointer-events-none" />
 
-            <div className="flex justify-between text-black w-full p-10 border-l-[1px] border-r-[1px] border-[rgba(0,0,0,0.07)] ">
-                <ul className="flex flex-col text-neutral-600 text-[16px] gap-3 font-normal">
-                    <li>Web Design</li>
-                    <li>Branding</li>
-                    <li>Social Media Marketing</li>
-                    <li>Development</li>
-                    <li>SEO Optimization</li>
-                </ul>
-                <div className="flex flex-col gap-[22px] max-w-[295px] text-neutral-600">
-                    <p>Some websites launch. Ours leave orbit. ODA builds brands and digital experiences engineered to hit different </p>
-                    <Button
-                        content={"Ok, Let's Do This"}
-                    />
+            <div className="relative z-10 h-full min-h-screen flex flex-col justify-between border-l-[1px] border-r-[1px] border-[rgba(0,0,0,0.07)] p-10">
+                <div className="flex justify-between text-black w-full">
+                    <ul className="flex flex-col text-neutral-600 text-[16px] gap-3 font-normal">
+                        <li>Web Design</li>
+                        <li>Branding</li>
+                        <li>Social Media Marketing</li>
+                        <li>Development</li>
+                        <li>SEO Optimization</li>
+                    </ul>
+                    <div className="flex flex-col gap-[22px] max-w-[295px] text-neutral-600">
+                        <p>Some websites launch. Ours leave orbit. ODA builds brands and digital experiences engineered to hit different </p>
+                        <Button
+                            content={"Ok, Let's Do This"}
+                        />
+                    </div>
                 </div>
+
+                <BlurText
+                    text="Ready for liftoff?"
+                    className="text-black text-[133.43px]"
+                    direction="bottom"
+                />
             </div>
         </section>
     );
