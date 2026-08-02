@@ -1,12 +1,21 @@
 // src/components/phases/Home/Phase2.jsx
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import InfiniteImageColumns from "@/components/animations/InfiniteImageColumns";
+import {
+    PEAK_Y,
+    CORNER_DEPTH_BY_BREAKPOINT,
+    getBreakpoint,
+    curvePath,
+    flattenPeakToCorner,
+} from "@/lib/phase3Curve";
 
 gsap.registerPlugin(ScrollTrigger);
+
+const PEEK_REVEAL_PERCENT = 16;
 
 export default function Phase2() {
     const slideContent = [
@@ -21,6 +30,27 @@ export default function Phase2() {
     const trackRef = useRef(null);
     const slideRefs = useRef([]);
     const bgRef = useRef(null);
+    const peekRef = useRef(null);
+    const curvePathRef = useRef(null);
+    const cornerDepthRef = useRef(CORNER_DEPTH_BY_BREAKPOINT.desktop);
+
+    const [breakpoint, setBreakpoint] = useState(() =>
+        typeof window !== "undefined" ? getBreakpoint(window.innerWidth) : "desktop"
+    );
+
+    useEffect(() => {
+        const handleResize = () => {
+            const next = getBreakpoint(window.innerWidth);
+            setBreakpoint((prev) => (prev === next ? prev : next));
+        };
+        handleResize();
+        window.addEventListener("resize", handleResize);
+        return () => window.removeEventListener("resize", handleResize);
+    }, []);
+
+    useEffect(() => {
+        cornerDepthRef.current = CORNER_DEPTH_BY_BREAKPOINT[breakpoint];
+    }, [breakpoint]);
 
     useEffect(() => {
         const section = sectionRef.current;
@@ -35,6 +65,8 @@ export default function Phase2() {
             borderColor: "#000000",
         });
 
+        gsap.set(peekRef.current, { yPercent: 100 });
+
         const ctx = gsap.context(() => {
             const last = slides.length - 1;
 
@@ -47,6 +79,8 @@ export default function Phase2() {
 
             const slidesFraction = slidesDistance / totalDistance;
             const stepSize = slidesFraction / last;
+
+            const scaleEndFraction = slidesFraction + scaleDistance / totalDistance;
 
             const tl = gsap.timeline();
             for (let i = 1; i <= last; i++) {
@@ -67,10 +101,6 @@ export default function Phase2() {
                 });
             }
 
-            // Snap stops for each slide transition only — deliberately excludes
-            // a stop at slidesFraction (the instant the last slide finishes),
-            // so the scroll flows straight from the last slide into the
-            // scale-down instead of freezing right before it starts.
             const snapPoints = [
                 ...Array.from({ length: last }, (_, i) => i * stepSize),
                 1,
@@ -92,11 +122,30 @@ export default function Phase2() {
                     ease: "power2.inOut",
                 },
                 animation: tl,
+                onUpdate: (self) => {
+                    const span = 1 - scaleEndFraction;
+                    const revealProgress = span > 0
+                        ? gsap.utils.clamp(0, 1, (self.progress - scaleEndFraction) / span)
+                        : 0;
+
+                    gsap.set(peekRef.current, {
+                        yPercent: 100 - revealProgress * PEEK_REVEAL_PERCENT,
+                    });
+
+                    if (curvePathRef.current) {
+                        curvePathRef.current.setAttribute(
+                            "d",
+                            flattenPeakToCorner(cornerDepthRef.current, revealProgress)
+                        );
+                    }
+                },
             });
         }, section);
 
         return () => ctx.revert();
     }, []);
+
+    const cornerDepth = CORNER_DEPTH_BY_BREAKPOINT[breakpoint];
 
     return (
         <section ref={sectionRef} className="bg-black w-full min-h-screen relative overflow-hidden">
@@ -142,6 +191,19 @@ export default function Phase2() {
                         ))}
                     </div>
                 </div>
+            </div>
+
+            <div className="absolute inset-x-0 bottom-0 z-20 h-screen pointer-events-none" aria-hidden="true">
+                <svg width="0" height="0" className="absolute">
+                    <clipPath id="phase2-peek-curve" clipPathUnits="objectBoundingBox">
+                        <path ref={curvePathRef} d={curvePath(cornerDepth, PEAK_Y)} />
+                    </clipPath>
+                </svg>
+                <div
+                    ref={peekRef}
+                    className="w-full h-full"
+                    style={{ backgroundColor: "#F3F3F3", clipPath: "url(#phase2-peek-curve)" }}
+                />
             </div>
         </section>
     );
