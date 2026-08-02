@@ -1,7 +1,7 @@
 // src/components/animations/InfiniteImageColumns.jsx
 "use client";
 
-import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import gsap from "gsap";
 
 const COLUMNS = [
@@ -10,8 +10,25 @@ const COLUMNS = [
     ["3-1", "3-2", "3-3"],
 ];
 
-const IMAGE_WIDTH = 515;
-const IMAGE_HEIGHT = 354;
+const BASE_IMAGE_WIDTH = 515;
+const BASE_IMAGE_HEIGHT = 354;
+const ASPECT = BASE_IMAGE_WIDTH / BASE_IMAGE_HEIGHT;
+
+// ---- Responsive layout — tweak these ----
+// columns: how many of the COLUMNS entries actually render at this size.
+// width: rendered image width in px; height is derived from ASPECT so the
+// images never look stretched. Matches Phase3's sm(640)/lg(1024) breakpoints.
+const LAYOUT_BY_BREAKPOINT = {
+    mobile: { columns: 1, width: 300 },  // 375px and up
+    tablet: { columns: 2, width: 340 },  // 640px and up
+    desktop: { columns: 3, width: BASE_IMAGE_WIDTH }, // 1024px and up — original size
+};
+
+const getBreakpoint = (width) => {
+    if (width >= 1024) return "desktop";
+    if (width >= 640) return "tablet";
+    return "mobile";
+};
 
 const InfiniteImageColumns = forwardRef(function InfiniteImageColumns(
     { className = "" },
@@ -20,40 +37,86 @@ const InfiniteImageColumns = forwardRef(function InfiniteImageColumns(
     const gridRef = useRef(null);
     const trackRefs = useRef([]);
     const tweens = useRef([]);
+    const isRunningRef = useRef(false);
+
+    const [breakpoint, setBreakpoint] = useState(() =>
+        typeof window !== "undefined" ? getBreakpoint(window.innerWidth) : "desktop"
+    );
+
+    useEffect(() => {
+        const handleResize = () => {
+            const next = getBreakpoint(window.innerWidth);
+            setBreakpoint((prev) => (prev === next ? prev : next));
+        };
+        handleResize();
+        window.addEventListener("resize", handleResize);
+        return () => window.removeEventListener("resize", handleResize);
+    }, []);
+
+    const { columns, width: imageWidth } = LAYOUT_BY_BREAKPOINT[breakpoint];
+    const imageHeight = Math.round(imageWidth / ASPECT);
+    const visibleColumns = COLUMNS.slice(0, columns);
+
+    // (Re)builds the tween for one column. Kill-without-touching-y means a
+    // rebuild — whether from startLoop or a dimension change — always
+    // continues from wherever the track currently sits, never resets to 0.
+    const buildOne = (i, track) => {
+        const distance = track.scrollHeight / 2;
+        if (!distance) return; // not laid out yet
+
+        tweens.current[i]?.kill();
+
+        tweens.current[i] = gsap.to(track, {
+            y: `-=${distance}`,
+            duration: 20 + i * 4,
+            ease: "none",
+            repeat: -1,
+            modifiers: {
+                y: gsap.utils.unitize((y) => parseFloat(y) % distance),
+            },
+        });
+
+        // Rebuilding for a resize shouldn't start playback on its own —
+        // only keep it running if the loop was already running.
+        if (!isRunningRef.current) {
+            tweens.current[i].pause();
+        }
+    };
 
     useImperativeHandle(ref, () => ({
         el: gridRef.current,
         startLoop: () => {
+            isRunningRef.current = true;
             trackRefs.current.forEach((track, i) => {
                 if (!track) return;
                 if (tweens.current[i] && tweens.current[i].isActive()) return;
-
-                const distance = track.scrollHeight / 2;
-
-                // kill the old tween WITHOUT touching y — track stays
-                // exactly where it was frozen
-                tweens.current[i]?.kill();
-
-                // "-=distance" is relative to the CURRENT y, so this
-                // continues from the frozen position, never resets to 0
-                tweens.current[i] = gsap.to(track, {
-                    y: `-=${distance}`,
-                    duration: 20 + i * 4,
-                    ease: "none",
-                    repeat: -1,
-                    modifiers: {
-                        // re-wraps every frame instead of snapping once
-                        // per lap — this is what makes it seamless
-                        y: gsap.utils.unitize((y) => parseFloat(y) % distance),
-                    },
-                });
+                buildOne(i, track);
             });
         },
         stopLoop: () => {
             // freeze in place — no reset, so reversing never jumps
+            isRunningRef.current = false;
             tweens.current.forEach((tw) => tw?.pause());
         },
     }));
+
+    // Dimensions/column count change with the breakpoint, so any tween
+    // built against the old track height has a stale wrap distance —
+    // rebuild it. Columns that disappeared at this breakpoint get their
+    // tween killed; columns that just (re)appeared while the loop is
+    // running get picked up too.
+    useEffect(() => {
+        trackRefs.current.forEach((track, i) => {
+            if (!track) {
+                tweens.current[i]?.kill();
+                tweens.current[i] = null;
+                return;
+            }
+            if (tweens.current[i] || isRunningRef.current) {
+                buildOne(i, track);
+            }
+        });
+    }, [breakpoint]);
 
     useEffect(() => {
         return () => {
@@ -66,16 +129,16 @@ const InfiniteImageColumns = forwardRef(function InfiniteImageColumns(
             ref={gridRef}
             className={`grid ${className}`}
             style={{
-                gridTemplateColumns: `repeat(${COLUMNS.length}, ${IMAGE_WIDTH}px)`,
+                gridTemplateColumns: `repeat(${columns}, ${imageWidth}px)`,
                 columnGap: "var(--column-gap, 0px)",
                 height: "100%",
             }}
         >
-            {COLUMNS.map((images, colIndex) => (
+            {visibleColumns.map((images, colIndex) => (
                 <div
                     key={colIndex}
                     className="relative h-full overflow-hidden"
-                    style={{ width: IMAGE_WIDTH }}
+                    style={{ width: imageWidth }}
                 >
                     <div
                         ref={(el) => (trackRefs.current[colIndex] = el)}
@@ -87,10 +150,10 @@ const InfiniteImageColumns = forwardRef(function InfiniteImageColumns(
                                 key={i}
                                 src={`/images/${name}.png`}
                                 alt={name}
-                                width={IMAGE_WIDTH}
-                                height={IMAGE_HEIGHT}
+                                width={imageWidth}
+                                height={imageHeight}
                                 className="object-cover shrink-0"
-                                style={{ width: IMAGE_WIDTH, height: IMAGE_HEIGHT }}
+                                style={{ width: imageWidth, height: imageHeight }}
                             />
                         ))}
                     </div>

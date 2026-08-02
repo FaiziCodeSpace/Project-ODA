@@ -1,7 +1,7 @@
 // src/components/phases/Home/Phase3.jsx
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import Button from "@/components/ui/Button";
@@ -9,16 +9,68 @@ import BlurText from "@/components/animations/BlurText";
 
 gsap.registerPlugin(ScrollTrigger);
 
+// ---- Curve controls — tweak these ----
+const PEAK_Y = 0;   // y of the peak at rest (0 = touches the very top, negative = pokes above it)
+const PEAK_X = 0.5; // x of the peak (0–1, 0.5 = centered)
+const CP1_X = 0;    // control point near the left corner
+const CP2_X = 0.2;  // control point approaching the peak from the left
+const CP3_X = 0.8;  // control point leaving the peak toward the right
+const CP4_X = 1;    // control point near the right corner
+// Lower CP1_X/higher CP2_X (closer together) = sharper, more pointed peak.
+// Spread them apart = a wider, rounder hill.
+
+// CORNER_DEPTH is a fraction of the section's HEIGHT, but the section gets
+// much narrower on mobile while staying roughly as tall (min-h-screen) —
+// so the same depth reads as a much steeper curve on a 375px screen than
+// on a 1440px one. Scale it down per breakpoint to keep the curve looking
+// proportionate. Matches Tailwind's sm (640px) / lg (1024px) breakpoints.
+const CORNER_DEPTH_BY_BREAKPOINT = {
+    mobile: 0.05,  // 375px and up
+    tablet: 0.08,  // 640px and up
+    desktop: 0.1,  // 1024px and up — your original value
+};
+
+const getBreakpoint = (width) => {
+    if (width >= 1024) return "desktop";
+    if (width >= 640) return "tablet";
+    return "mobile";
+};
+
+// Builds the clip path from the two y-values above (corner depth + peak
+// height); the x positions stay fixed. Scroll animates cornerY and peakY
+// both down to 0, which straightens the whole thing into a flat rectangle.
+const curvePath = (cornerY, peakY) =>
+    `M 0,${cornerY} C ${CP1_X},${cornerY} ${CP2_X},${peakY} ${PEAK_X},${peakY} C ${CP3_X},${peakY} ${CP4_X},${cornerY} 1,${cornerY} L 1,1 L 0,1 Z`;
+
 export default function Phase3() {
     const sectionRef = useRef(null);
     const plusLayerRef = useRef(null);
     const cursorLayerRef = useRef(null);
+    const clipPathElRef = useRef(null);
+
+    const [breakpoint, setBreakpoint] = useState(() =>
+        typeof window !== "undefined" ? getBreakpoint(window.innerWidth) : "desktop"
+    );
+
+    // Track breakpoint (not raw width) so we only rebuild the curve/timeline
+    // when we actually cross a threshold, not on every resize pixel.
+    useEffect(() => {
+        const handleResize = () => {
+            const next = getBreakpoint(window.innerWidth);
+            setBreakpoint((prev) => (prev === next ? prev : next));
+        };
+        handleResize();
+        window.addEventListener("resize", handleResize);
+        return () => window.removeEventListener("resize", handleResize);
+    }, []);
 
     useEffect(() => {
         const section = sectionRef.current;
         const phase2Content = document.getElementById("phase2-content");
+        const cornerDepth = CORNER_DEPTH_BY_BREAKPOINT[breakpoint];
 
         gsap.set(section, { marginTop: 0 });
+        gsap.set(clipPathElRef.current, { attr: { d: curvePath(cornerDepth, PEAK_Y) } });
 
         const tl = gsap.timeline({
             scrollTrigger: {
@@ -28,11 +80,12 @@ export default function Phase3() {
                 scrub: true,
             },
         });
+
+        // Corners and peak both flatten to 0 — the hill becomes a straight edge.
         tl.to(
-            section,
+            clipPathElRef.current,
             {
-                borderTopLeftRadius: 0,
-                borderTopRightRadius: 0,
+                attr: { d: curvePath(0, 0) },
                 duration: 0.8,
                 ease: "none",
             },
@@ -65,7 +118,7 @@ export default function Phase3() {
             tl.scrollTrigger?.kill();
             tl.kill();
         };
-    }, []);
+    }, [breakpoint]);
 
     useEffect(() => {
         const layer = plusLayerRef.current;
@@ -145,11 +198,13 @@ export default function Phase3() {
         };
     }, []);
 
-    // Cursor-trail image spawn effect
+    // Cursor-trail image spawn effect — skipped on touch devices, since a
+    // mouse-follow effect has nothing to follow there.
     useEffect(() => {
         const section = sectionRef.current;
         const layer = cursorLayerRef.current;
         if (!section || !layer) return;
+        if (window.matchMedia("(pointer: coarse)").matches) return;
 
         const MIN_DISTANCE = 90; // px, min cursor travel before next spawn
         const MIN_INTERVAL = 90; // ms, min time between spawns
@@ -260,22 +315,29 @@ export default function Phase3() {
     return (
         <section
             ref={sectionRef}
-            className="relative z-[999] bg-[#F3F3F3] rounded-t-[50px] min-h-screen px-20 overflow-hidden"
+            className="relative z-[999] bg-[#F3F3F3] min-h-screen overflow-hidden px-5 sm:px-8 md:px-12 lg:px-20"
+            style={{ clipPath: "url(#phase3-top-curve)" }}
         >
+            <svg width="0" height="0" className="absolute">
+                <clipPath id="phase3-top-curve" clipPathUnits="objectBoundingBox">
+                    <path ref={clipPathElRef} d={curvePath(CORNER_DEPTH_BY_BREAKPOINT[breakpoint], PEAK_Y)} />
+                </clipPath>
+            </svg>
+
             <div ref={plusLayerRef} className="absolute inset-0 z-0" />
             <div ref={cursorLayerRef} className="absolute inset-0 z-0 pointer-events-none" />
 
-            <div className="relative z-10 h-full min-h-screen flex flex-col justify-between border-l-[1px] border-r-[1px] border-[rgba(0,0,0,0.07)] p-10">
-                <div className="flex justify-between text-black w-full">
-                    <ul className="flex flex-col text-neutral-600 text-[16px] gap-3 font-normal">
+            <div className="relative z-10 h-full min-h-screen flex flex-col justify-between border-l-[1px] border-r-[1px] border-[rgba(0,0,0,0.07)] p-5 sm:p-6 md:p-8 lg:p-10 mt-10">
+                <div className="flex flex-col md:flex-row md:justify-between gap-8 md:gap-6 text-black w-full">
+                    <ul className="flex flex-col text-neutral-600 text-[14px] sm:text-[16px] gap-2 sm:gap-3 font-normal">
                         <li>Web Design</li>
                         <li>Branding</li>
                         <li>Social Media Marketing</li>
                         <li>Development</li>
                         <li>SEO Optimization</li>
                     </ul>
-                    <div className="flex flex-col gap-[22px] max-w-[295px] text-neutral-600">
-                        <p>Some websites launch. Ours leave orbit. ODA builds brands and digital experiences engineered to hit different </p>
+                    <div className="flex flex-col gap-4 sm:gap-[22px] w-full md:max-w-[295px] text-neutral-600">
+                        <p className="text-sm sm:text-base">Some websites launch. Ours leave orbit. ODA builds brands and digital experiences engineered to hit different </p>
                         <Button
                             content={"Ok, Let's Do This"}
                         />
@@ -284,7 +346,7 @@ export default function Phase3() {
 
                 <BlurText
                     text="Ready for liftoff?"
-                    className="text-black text-[133.43px]"
+                    className="text-black text-[40px] sm:text-[56px] md:text-[90px] lg:text-[133.43px] leading-tight"
                     direction="bottom"
                 />
             </div>
