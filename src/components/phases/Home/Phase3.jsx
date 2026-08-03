@@ -156,8 +156,10 @@ export default function Phase3() {
             if (pool.length === 0) return; // nothing preloaded yet
 
             const url = pool[Math.floor(Math.random() * pool.length)];
-            const width = gsap.utils.random(120, 150, 1);
-            const height = Math.round(width * (16 / 9));
+            const size = gsap.utils.random(120, 150, 1);
+
+const width = size;
+const height = size;
             const rotation = gsap.utils.random(-6, 6);
             const offsetX = gsap.utils.random(-20, 20);
             const offsetY = gsap.utils.random(-20, 20);

@@ -1,4 +1,3 @@
-// src/components/phases/Home/Phase2.jsx
 "use client";
 
 import { useEffect, useRef, useState } from "react";
@@ -7,15 +6,16 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import InfiniteImageColumns from "@/components/animations/InfiniteImageColumns";
 import {
     PEAK_Y,
-    CORNER_DEPTH_BY_BREAKPOINT,
-    getBreakpoint,
+    getCornerDepth,
     curvePath,
     flattenPeakToCorner,
 } from "@/lib/phase3Curve";
 
 gsap.registerPlugin(ScrollTrigger);
 
-const PEEK_REVEAL_PERCENT = 16;
+const PEEK_REVEAL_PERCENT = 12;
+const FLATTEN_TARGET_VIEWPORT_FRACTION = 0.02;
+const SEAM_OVERLAP_PX = 2;
 
 export default function Phase2() {
     const slideContent = [
@@ -32,16 +32,21 @@ export default function Phase2() {
     const bgRef = useRef(null);
     const peekRef = useRef(null);
     const curvePathRef = useRef(null);
-    const cornerDepthRef = useRef(CORNER_DEPTH_BY_BREAKPOINT.desktop);
+    const cornerDepthRef = useRef(getCornerDepth(1440));
+    const flattenProgressRef = useRef(0);
+    // True only once InfiniteImageColumns confirms (via GSAP's real onStart)
+    // that it has actually begun sliding — the peek reveal waits on this.
+    const columnsSlidingRef = useRef(false);
 
-    const [breakpoint, setBreakpoint] = useState(() =>
-        typeof window !== "undefined" ? getBreakpoint(window.innerWidth) : "desktop"
+    const [viewportWidth, setViewportWidth] = useState(() =>
+        typeof window !== "undefined" ? window.innerWidth : 1440
     );
 
     useEffect(() => {
         const handleResize = () => {
-            const next = getBreakpoint(window.innerWidth);
-            setBreakpoint((prev) => (prev === next ? prev : next));
+            setViewportWidth((prev) =>
+                prev === window.innerWidth ? prev : window.innerWidth
+            );
         };
         handleResize();
         window.addEventListener("resize", handleResize);
@@ -49,8 +54,8 @@ export default function Phase2() {
     }, []);
 
     useEffect(() => {
-        cornerDepthRef.current = CORNER_DEPTH_BY_BREAKPOINT[breakpoint];
-    }, [breakpoint]);
+        cornerDepthRef.current = getCornerDepth(viewportWidth);
+    }, [viewportWidth]);
 
     useEffect(() => {
         const section = sectionRef.current;
@@ -72,39 +77,58 @@ export default function Phase2() {
 
             const stepDistance = window.innerHeight * 0.8;
             const scaleDistance = window.innerHeight * 0.8;
-            const gapRevealDistance = window.innerHeight * 0.6;
+            const gapDistance = window.innerHeight * 0.5;       // column-gap spread animation
+            const revealDistance = window.innerHeight * 0.6;    // pure scroll room for the peek, AFTER gap is done
 
             const slidesDistance = stepDistance * last;
-            const totalDistance = slidesDistance + scaleDistance + gapRevealDistance;
+            const totalDistance =
+                slidesDistance + scaleDistance + gapDistance + revealDistance;
 
             const slidesFraction = slidesDistance / totalDistance;
             const stepSize = slidesFraction / last;
+            const scaleFraction = scaleDistance / totalDistance;
+            const gapFraction = gapDistance / totalDistance;
+            const revealFraction = revealDistance / totalDistance;
 
-            const scaleEndFraction = slidesFraction + scaleDistance / totalDistance;
+            const scaleEndFraction = slidesFraction + scaleFraction;
+            const gapEndFraction = scaleEndFraction + gapFraction; // gap animation truly complete here
 
             const tl = gsap.timeline();
             for (let i = 1; i <= last; i++) {
-                tl.to(track, { y: -slides[i].offsetTop, ease: "none" });
+                tl.to(track, {
+                    y: -slides[i].offsetTop,
+                    ease: "none",
+                    duration: stepSize,
+                });
             }
             tl.to(content, {
                 scale: 0.7,
                 borderColor: "rgba(255, 255, 255, 0.05)",
                 ease: "none",
+                duration: scaleFraction,
             });
             if (bgRef.current?.el) {
                 tl.to(bgRef.current.el, {
                     "--column-gap": "24px",
                     "--row-gap": "24px",
                     ease: "none",
-                    onComplete: () => bgRef.current?.startLoop(),
-                    onReverseComplete: () => bgRef.current?.stopLoop(),
+                    duration: gapFraction,
+                    onComplete: () => {
+                        bgRef.current?.startLoop(() => {
+                            columnsSlidingRef.current = true;
+                            ScrollTrigger.update();
+                        });
+                    },
+                    onReverseComplete: () => {
+                        bgRef.current?.stopLoop();
+                        columnsSlidingRef.current = false;
+                        ScrollTrigger.update();
+                    },
                 });
+                // Pure hold, no visual change — reserves scroll room so the
+                // gap tween above genuinely finishes at gapEndFraction.
+                tl.to({}, { duration: revealFraction });
             }
-
-            const snapPoints = [
-                ...Array.from({ length: last }, (_, i) => i * stepSize),
-                1,
-            ];
 
             ScrollTrigger.create({
                 trigger: section,
@@ -114,28 +138,52 @@ export default function Phase2() {
                 scrub: 1,
                 anticipatePin: 1,
                 snap: {
-                    snapTo: (progress) =>
-                        snapPoints.reduce((closest, p) =>
+                    // Only snap between slide steps. Past that point, let the
+                    // scale/gap/reveal chain scrub 1:1 with real scroll input —
+                    // this was previously jumping straight from the last slide
+                    // to progress===1, skipping scale/gap/reveal entirely.
+                    snapTo: (progress) => {
+                        if (progress >= slidesFraction) return progress;
+                        const stepSnaps = Array.from({ length: last }, (_, i) => i * stepSize);
+                        return stepSnaps.reduce((closest, p) =>
                             Math.abs(p - progress) < Math.abs(closest - progress) ? p : closest
-                        ),
+                        );
+                    },
                     duration: { min: 0.2, max: 0.5 },
                     ease: "power2.inOut",
                 },
                 animation: tl,
                 onUpdate: (self) => {
-                    const span = 1 - scaleEndFraction;
-                    const revealProgress = span > 0
-                        ? gsap.utils.clamp(0, 1, (self.progress - scaleEndFraction) / span)
+                    const revealProgress = revealFraction > 0 && columnsSlidingRef.current
+                        ? gsap.utils.clamp(0, 1, (self.progress - gapEndFraction) / revealFraction)
                         : 0;
 
                     gsap.set(peekRef.current, {
                         yPercent: 100 - revealProgress * PEEK_REVEAL_PERCENT,
                     });
+                },
+            });
 
+            const pinEndScrollY = section.offsetTop + totalDistance;
+            const peakScreenYAtUnpin =
+                ((100 - PEEK_REVEAL_PERCENT) / 100) * window.innerHeight;
+            const targetScreenY =
+                FLATTEN_TARGET_VIEWPORT_FRACTION * window.innerHeight;
+            const flattenScrollDistance = Math.max(
+                1,
+                peakScreenYAtUnpin - targetScreenY
+            );
+
+            ScrollTrigger.create({
+                start: pinEndScrollY,
+                end: pinEndScrollY + flattenScrollDistance,
+                scrub: true,
+                onUpdate: (self) => {
+                    flattenProgressRef.current = self.progress;
                     if (curvePathRef.current) {
                         curvePathRef.current.setAttribute(
                             "d",
-                            flattenPeakToCorner(cornerDepthRef.current, revealProgress)
+                            flattenPeakToCorner(cornerDepthRef.current, self.progress)
                         );
                     }
                 },
@@ -145,7 +193,9 @@ export default function Phase2() {
         return () => ctx.revert();
     }, []);
 
-    const cornerDepth = CORNER_DEPTH_BY_BREAKPOINT[breakpoint];
+    const cornerDepth = getCornerDepth(viewportWidth);
+
+    slideRefs.current = [];
 
     return (
         <section ref={sectionRef} className="bg-black w-full min-h-screen relative overflow-hidden">
@@ -193,16 +243,27 @@ export default function Phase2() {
                 </div>
             </div>
 
-            <div className="absolute inset-x-0 bottom-0 z-20 h-screen pointer-events-none" aria-hidden="true">
+            <div
+                className="absolute inset-x-0 z-20 pointer-events-none"
+                style={{ bottom: -SEAM_OVERLAP_PX, height: `calc(100vh + ${SEAM_OVERLAP_PX}px)` }}
+                aria-hidden="true"
+            >
                 <svg width="0" height="0" className="absolute">
                     <clipPath id="phase2-peek-curve" clipPathUnits="objectBoundingBox">
-                        <path ref={curvePathRef} d={curvePath(cornerDepth, PEAK_Y)} />
+                        <path
+                            ref={curvePathRef}
+                            d={flattenPeakToCorner(cornerDepth, flattenProgressRef.current)}
+                        />
                     </clipPath>
                 </svg>
                 <div
                     ref={peekRef}
                     className="w-full h-full"
-                    style={{ backgroundColor: "#F3F3F3", clipPath: "url(#phase2-peek-curve)" }}
+                    style={{
+                        backgroundColor: "#F3F3F3",
+                        clipPath: "url(#phase2-peek-curve)",
+                        transform: "translateZ(0)",
+                    }}
                 />
             </div>
         </section>

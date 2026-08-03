@@ -60,7 +60,9 @@ const InfiniteImageColumns = forwardRef(function InfiniteImageColumns(
     // (Re)builds the tween for one column. Kill-without-touching-y means a
     // rebuild — whether from startLoop or a dimension change — always
     // continues from wherever the track currently sits, never resets to 0.
-    const buildOne = (i, track) => {
+    // onFirstFrame (only ever passed for column 0) fires on GSAP's real
+    // onStart — the actual confirmation that this column began moving.
+    const buildOne = (i, track, onFirstFrame) => {
         const distance = track.scrollHeight / 2;
         if (!distance) return; // not laid out yet
 
@@ -74,6 +76,7 @@ const InfiniteImageColumns = forwardRef(function InfiniteImageColumns(
             modifiers: {
                 y: gsap.utils.unitize((y) => parseFloat(y) % distance),
             },
+            onStart: i === 0 ? onFirstFrame : undefined,
         });
 
         // Rebuilding for a resize shouldn't start playback on its own —
@@ -85,12 +88,18 @@ const InfiniteImageColumns = forwardRef(function InfiniteImageColumns(
 
     useImperativeHandle(ref, () => ({
         el: gridRef.current,
-        startLoop: () => {
+        // onConfirmSliding fires once column 0's tween actually starts
+        // moving. If it's already running (e.g. called again without a
+        // stopLoop in between), sliding is already confirmed — fire right away.
+        startLoop: (onConfirmSliding) => {
             isRunningRef.current = true;
             trackRefs.current.forEach((track, i) => {
                 if (!track) return;
-                if (tweens.current[i] && tweens.current[i].isActive()) return;
-                buildOne(i, track);
+                if (tweens.current[i] && tweens.current[i].isActive()) {
+                    if (i === 0) onConfirmSliding?.();
+                    return;
+                }
+                buildOne(i, track, i === 0 ? onConfirmSliding : undefined);
             });
         },
         stopLoop: () => {
