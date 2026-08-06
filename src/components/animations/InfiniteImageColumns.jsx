@@ -14,10 +14,6 @@ const BASE_IMAGE_WIDTH = 515;
 const BASE_IMAGE_HEIGHT = 354;
 const ASPECT = BASE_IMAGE_WIDTH / BASE_IMAGE_HEIGHT;
 
-// ---- Responsive layout — tweak these ----
-// columns: how many of the COLUMNS entries actually render at this size.
-// width: rendered image width in px; height is derived from ASPECT so the
-// images never look stretched. Matches Phase3's sm(640)/lg(1024) breakpoints.
 const LAYOUT_BY_BREAKPOINT = {
     mobile: { columns: 1, width: 300 },  // 375px and up
     tablet: { columns: 2, width: 340 },  // 640px and up
@@ -109,11 +105,6 @@ const InfiniteImageColumns = forwardRef(function InfiniteImageColumns(
         },
     }));
 
-    // Dimensions/column count change with the breakpoint, so any tween
-    // built against the old track height has a stale wrap distance —
-    // rebuild it. Columns that disappeared at this breakpoint get their
-    // tween killed; columns that just (re)appeared while the loop is
-    // running get picked up too.
     useEffect(() => {
         trackRefs.current.forEach((track, i) => {
             if (!track) {

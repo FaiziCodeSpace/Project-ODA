@@ -249,7 +249,7 @@ const height = size;
             <div ref={cursorLayerRef} className="absolute inset-0 z-0 pointer-events-none" />
 
             <div className="relative z-10 h-full min-h-screen flex flex-col justify-between border-l-[1px] border-r-[1px] border-[rgba(0,0,0,0.07)] p-5 sm:p-6 md:p-8 lg:p-10 mt-10">
-                <div className="flex flex-col md:flex-row md:justify-between gap-8 md:gap-6 text-black w-full">
+                <div className="flex flex-col md:flex-row md:justify-between gap-8 md:gap-6 text-black w-full font-founders">
                     <ul className="flex flex-col text-neutral-600 text-[14px] sm:text-[16px] gap-2 sm:gap-3 font-normal">
                         <li>Web Design</li>
                         <li>Branding</li>

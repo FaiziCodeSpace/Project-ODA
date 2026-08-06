@@ -206,7 +206,7 @@ export default function Phase2() {
             </div>
 
             <div id="phase2-content" ref={contentRef} className="bg-black relative z-10 w-full min-h-screen">
-                <div className="relative flex items-center justify-between px-20 pt-12 text-neutral-500 text-[11px]">
+                <div className="relative flex items-center justify-between px-20 pt-12 text-neutral-500 text-[11px] font-dm-mono">
                     <div>
                         <p>
                             Looking for your next
@@ -223,7 +223,7 @@ export default function Phase2() {
                 </div>
 
                 <div className="w-[547px] h-[142px] absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 overflow-hidden">
-                    <div ref={trackRef} className="flex flex-col gap-2">
+                    <div ref={trackRef} className="flex flex-col gap-2 font-founders-power">
                         {slideContent.map((slide, i) => (
                             <div
                                 key={i}

@@ -60,7 +60,7 @@ export default function BlurText({
     const words = text.split(" ");
 
     return (
-        <p ref={containerRef} className={className} style={{ display: "flex", flexWrap: "wrap" }}>
+        <p ref={containerRef} className={`${className} font-power`} style={{ display: "flex", flexWrap: "wrap" }}>
             {words.map((word, i) => (
                 <span key={i} data-word className="inline-block will-change-[transform,filter,opacity]">
                     {word}

@@ -3,3 +3,11 @@
 @theme{
     --color-primary: #1E3A8A;
 }
+
+@theme inline {
+  --font-founders: var(--font-founders), sans-serif;
+  --font-founders-cond: var(--font-founders-cond), sans-serif;
+  --font-founders-xcond: var(--font-founders-xcond), sans-serif;
+  --font-power: var(--font-power), sans-serif;
+  --font-dm-mono: var(--font-dm-mono), monospace;
+}
