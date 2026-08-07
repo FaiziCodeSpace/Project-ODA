@@ -20,7 +20,7 @@ export default function Phase4() {
         })
     }, [])
     return (
-        <section ref={sectionRef} className="flex flex-col gap-8 bg-[#ececec] px-20 py-34">
+        <section ref={sectionRef} className="flex flex-col gap-8 bg-[#F3F3F3] px-20 py-34">
             <div className="flex justify-between flex-">
                 <h2 className="text-[70px] w-[40%] leading-none font-power">Where Big Ideas Find Their Orbit.</h2>
                 <div className="flex flex-col gap-[22px] max-w-[465px] text-neutral-600">
