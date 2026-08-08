@@ -296,7 +296,7 @@ export default function Phase5() {
     };
 
     return (
-        <section className="bg-[#F3F3F3]">
+        <section className="bg-[#F3F3F3] pb-[280px]">
             <p className="text-center text-[#4C3CFF] text-[14px] font-power">[02]</p>
             <div className="text-center mt-24 sm:mt-32 md:mt-45 font-founders text-[36px] sm:text-[50px] md:text-[70px] leading-none px-4">
                 <h2>What we do</h2>
