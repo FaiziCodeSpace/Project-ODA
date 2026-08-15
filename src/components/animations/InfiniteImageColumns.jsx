@@ -1,7 +1,6 @@
-// src/components/animations/InfiniteImageColumns.jsx
 "use client";
 
-import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 import gsap from "gsap";
 
 const COLUMNS = [
@@ -10,21 +9,22 @@ const COLUMNS = [
     ["3-1", "3-2", "3-3"],
 ];
 
-const BASE_IMAGE_WIDTH = 515;
-const BASE_IMAGE_HEIGHT = 354;
-const ASPECT = BASE_IMAGE_WIDTH / BASE_IMAGE_HEIGHT;
+const REFERENCE_VIEWPORT = 1440;
+const MIN_VIEWPORT = 375;
+const MAX_VIEWPORT = 1920;
 
-const LAYOUT_BY_BREAKPOINT = {
-    mobile: { columns: 1, width: 300 },  // 375px and up
-    tablet: { columns: 2, width: 340 },  // 640px and up
-    desktop: { columns: 3, width: BASE_IMAGE_WIDTH }, // 1024px and up — original size
+const REFERENCE_IMAGE_WIDTH = 515;
+const REFERENCE_IMAGE_HEIGHT = 354;
+
+const fluid = (px) => {
+    const vw = (px / REFERENCE_VIEWPORT) * 100;
+    const min = (vw / 100) * MIN_VIEWPORT;
+    const max = (vw / 100) * MAX_VIEWPORT;
+    return `clamp(${min.toFixed(2)}px, ${vw.toFixed(4)}vw, ${max.toFixed(2)}px)`;
 };
 
-const getBreakpoint = (width) => {
-    if (width >= 1024) return "desktop";
-    if (width >= 640) return "tablet";
-    return "mobile";
-};
+const IMAGE_WIDTH = fluid(REFERENCE_IMAGE_WIDTH);
+const ASPECT_RATIO = `${REFERENCE_IMAGE_WIDTH} / ${REFERENCE_IMAGE_HEIGHT}`;
 
 const InfiniteImageColumns = forwardRef(function InfiniteImageColumns(
     { className = "" },
@@ -35,32 +35,9 @@ const InfiniteImageColumns = forwardRef(function InfiniteImageColumns(
     const tweens = useRef([]);
     const isRunningRef = useRef(false);
 
-    const [breakpoint, setBreakpoint] = useState(() =>
-        typeof window !== "undefined" ? getBreakpoint(window.innerWidth) : "desktop"
-    );
-
-    useEffect(() => {
-        const handleResize = () => {
-            const next = getBreakpoint(window.innerWidth);
-            setBreakpoint((prev) => (prev === next ? prev : next));
-        };
-        handleResize();
-        window.addEventListener("resize", handleResize);
-        return () => window.removeEventListener("resize", handleResize);
-    }, []);
-
-    const { columns, width: imageWidth } = LAYOUT_BY_BREAKPOINT[breakpoint];
-    const imageHeight = Math.round(imageWidth / ASPECT);
-    const visibleColumns = COLUMNS.slice(0, columns);
-
-    // (Re)builds the tween for one column. Kill-without-touching-y means a
-    // rebuild — whether from startLoop or a dimension change — always
-    // continues from wherever the track currently sits, never resets to 0.
-    // onFirstFrame (only ever passed for column 0) fires on GSAP's real
-    // onStart — the actual confirmation that this column began moving.
     const buildOne = (i, track, onFirstFrame) => {
         const distance = track.scrollHeight / 2;
-        if (!distance) return; // not laid out yet
+        if (!distance) return;
 
         tweens.current[i]?.kill();
 
@@ -75,18 +52,22 @@ const InfiniteImageColumns = forwardRef(function InfiniteImageColumns(
             onStart: i === 0 ? onFirstFrame : undefined,
         });
 
-        // Rebuilding for a resize shouldn't start playback on its own —
-        // only keep it running if the loop was already running.
         if (!isRunningRef.current) {
             tweens.current[i].pause();
         }
     };
 
+    const rebuildAll = () => {
+        trackRefs.current.forEach((track, i) => {
+            if (!track) return;
+            if (tweens.current[i] || isRunningRef.current) {
+                buildOne(i, track);
+            }
+        });
+    };
+
     useImperativeHandle(ref, () => ({
         el: gridRef.current,
-        // onConfirmSliding fires once column 0's tween actually starts
-        // moving. If it's already running (e.g. called again without a
-        // stopLoop in between), sliding is already confirmed — fire right away.
         startLoop: (onConfirmSliding) => {
             isRunningRef.current = true;
             trackRefs.current.forEach((track, i) => {
@@ -99,24 +80,23 @@ const InfiniteImageColumns = forwardRef(function InfiniteImageColumns(
             });
         },
         stopLoop: () => {
-            // freeze in place — no reset, so reversing never jumps
             isRunningRef.current = false;
             tweens.current.forEach((tw) => tw?.pause());
         },
     }));
 
     useEffect(() => {
-        trackRefs.current.forEach((track, i) => {
-            if (!track) {
-                tweens.current[i]?.kill();
-                tweens.current[i] = null;
-                return;
-            }
-            if (tweens.current[i] || isRunningRef.current) {
-                buildOne(i, track);
-            }
-        });
-    }, [breakpoint]);
+        let timeout;
+        const handleResize = () => {
+            clearTimeout(timeout);
+            timeout = setTimeout(rebuildAll, 200);
+        };
+        window.addEventListener("resize", handleResize);
+        return () => {
+            window.removeEventListener("resize", handleResize);
+            clearTimeout(timeout);
+        };
+    }, []);
 
     useEffect(() => {
         return () => {
@@ -129,16 +109,16 @@ const InfiniteImageColumns = forwardRef(function InfiniteImageColumns(
             ref={gridRef}
             className={`grid ${className}`}
             style={{
-                gridTemplateColumns: `repeat(${columns}, ${imageWidth}px)`,
+                gridTemplateColumns: `repeat(3, ${IMAGE_WIDTH})`,
                 columnGap: "var(--column-gap, 0px)",
                 height: "100%",
             }}
         >
-            {visibleColumns.map((images, colIndex) => (
+            {COLUMNS.map((images, colIndex) => (
                 <div
                     key={colIndex}
                     className="relative h-full overflow-hidden"
-                    style={{ width: imageWidth }}
+                    style={{ width: IMAGE_WIDTH }}
                 >
                     <div
                         ref={(el) => (trackRefs.current[colIndex] = el)}
@@ -150,10 +130,10 @@ const InfiniteImageColumns = forwardRef(function InfiniteImageColumns(
                                 key={i}
                                 src={`/images/${name}.png`}
                                 alt={name}
-                                width={imageWidth}
-                                height={imageHeight}
-                                className="object-cover shrink-0"
-                                style={{ width: imageWidth, height: imageHeight }}
+                                width={REFERENCE_IMAGE_WIDTH}
+                                height={REFERENCE_IMAGE_HEIGHT}
+                                className="w-full shrink-0 object-cover"
+                                style={{ aspectRatio: ASPECT_RATIO }}
                             />
                         ))}
                     </div>

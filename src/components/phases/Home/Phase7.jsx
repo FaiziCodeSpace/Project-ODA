@@ -171,7 +171,7 @@ export default function Phase7() {
                     scrollTrigger: {
                         trigger: sectionRef.current,
                         start: 'top top',
-                        end: '+=2500', // was +=2400 — extended to fit the new buffer segment
+                        end: '+=2000', 
                         pin: true,
                         scrub: 1,
                         anticipatePin: 1,
@@ -205,13 +205,6 @@ export default function Phase7() {
 
                 tl.addLabel('start');
 
-                // Idle buffer sitting right at the pin boundary. Wrapper is still
-                // opacity:0 here (from the initial gsap.set), so nothing is visually
-                // different on forward scroll — but on reverse scroll this buffer is the
-                // LAST thing to play before the raw scroll crosses the unpin boundary,
-                // giving the scrub-lagged opacity tween real time to finish reaching 0
-                // before the pin actually releases. It is intentionally NOT a snap target
-                // (see snapTo above) so forward scroll can't get pulled back into it.
                 tl.to({}, {
                     duration: 300,
                 });

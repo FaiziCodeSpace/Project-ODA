@@ -243,7 +243,7 @@ const height = size;
     return (
         <section
             ref={sectionRef}
-            className="relative z-[999] bg-[#F3F3F3] min-h-screen overflow-hidden px-5 sm:px-8 md:px-12 lg:px-20"
+            className="relative z-[999] bg-[#F3F3F3] -mt-1 min-h-screen overflow-hidden px-5 sm:px-8 md:px-12 lg:px-20"
         >
             <div ref={plusLayerRef} className="absolute inset-0 z-0" />
             <div ref={cursorLayerRef} className="absolute inset-0 z-0 pointer-events-none" />

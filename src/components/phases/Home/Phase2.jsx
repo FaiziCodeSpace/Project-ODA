@@ -17,6 +17,35 @@ const PEEK_REVEAL_PERCENT = 12;
 const FLATTEN_TARGET_VIEWPORT_FRACTION = 0.02;
 const SEAM_OVERLAP_PX = 2;
 
+const REFERENCE_VIEWPORT = 1440;
+const MIN_VIEWPORT = 375;
+const MAX_VIEWPORT = 1920;
+
+const fluid = (px, options = {}) => {
+    const vw = (px / REFERENCE_VIEWPORT) * 100;
+    const min = options.min ?? (vw / 100) * MIN_VIEWPORT;
+    const max = options.max ?? (vw / 100) * MAX_VIEWPORT;
+    return `clamp(${min.toFixed(2)}px, ${vw.toFixed(4)}vw, ${max.toFixed(2)}px)`;
+};
+
+const fluidValue = (px, viewport) => {
+    const ratio = px / REFERENCE_VIEWPORT;
+    return Math.min(
+        ratio * MAX_VIEWPORT,
+        Math.max(ratio * MIN_VIEWPORT, ratio * viewport)
+    );
+};
+
+const CONTENT_WIDTH = fluid(547, { min: 320 });
+const CONTENT_HEIGHT = fluid(142, { min: 88 });
+const SLIDE_FONT_SIZE = fluid(120, { min: 64 });
+const LOGO_WIDTH = fluid(90, { min: 56 });
+const TRACK_GAP = fluid(8);
+const HEADER_PADDING_X = fluid(80);
+const HEADER_PADDING_TOP = fluid(48);
+const HEADER_FONT_SIZE = fluid(11, { min: 11 });
+const BORDER_WIDTH = fluid(6);
+
 export default function Phase2() {
     const slideContent = [
         { image: "/logo/O.svg" },
@@ -34,8 +63,6 @@ export default function Phase2() {
     const curvePathRef = useRef(null);
     const cornerDepthRef = useRef(getCornerDepth(1440));
     const flattenProgressRef = useRef(0);
-    // True only once InfiniteImageColumns confirms (via GSAP's real onStart)
-    // that it has actually begun sliding — the peek reveal waits on this.
     const columnsSlidingRef = useRef(false);
 
     const [viewportWidth, setViewportWidth] = useState(() =>
@@ -64,8 +91,8 @@ export default function Phase2() {
         const slides = slideRefs.current;
         if (!section || !content || !track || slides.length === 0) return;
 
+        content.style.borderWidth = BORDER_WIDTH;
         gsap.set(content, {
-            borderWidth: "6px",
             borderStyle: "solid",
             borderColor: "#000000",
         });
@@ -77,8 +104,8 @@ export default function Phase2() {
 
             const stepDistance = window.innerHeight * 0.8;
             const scaleDistance = window.innerHeight * 0.8;
-            const gapDistance = window.innerHeight * 0.5;       // column-gap spread animation
-            const revealDistance = window.innerHeight * 0.6;    // pure scroll room for the peek, AFTER gap is done
+            const gapDistance = window.innerHeight * 0.5;
+            const revealDistance = window.innerHeight * 0.6;
 
             const slidesDistance = stepDistance * last;
             const totalDistance =
@@ -91,7 +118,9 @@ export default function Phase2() {
             const revealFraction = revealDistance / totalDistance;
 
             const scaleEndFraction = slidesFraction + scaleFraction;
-            const gapEndFraction = scaleEndFraction + gapFraction; // gap animation truly complete here
+            const gapEndFraction = scaleEndFraction + gapFraction;
+
+            const columnGapTarget = `${fluidValue(24, window.innerWidth).toFixed(2)}px`;
 
             const tl = gsap.timeline();
             for (let i = 1; i <= last; i++) {
@@ -109,8 +138,8 @@ export default function Phase2() {
             });
             if (bgRef.current?.el) {
                 tl.to(bgRef.current.el, {
-                    "--column-gap": "24px",
-                    "--row-gap": "24px",
+                    "--column-gap": columnGapTarget,
+                    "--row-gap": columnGapTarget,
                     ease: "none",
                     duration: gapFraction,
                     onComplete: () => {
@@ -125,8 +154,6 @@ export default function Phase2() {
                         ScrollTrigger.update();
                     },
                 });
-                // Pure hold, no visual change — reserves scroll room so the
-                // gap tween above genuinely finishes at gapEndFraction.
                 tl.to({}, { duration: revealFraction });
             }
 
@@ -138,10 +165,6 @@ export default function Phase2() {
                 scrub: 1,
                 anticipatePin: 1,
                 snap: {
-                    // Only snap between slide steps. Past that point, let the
-                    // scale/gap/reveal chain scrub 1:1 with real scroll input —
-                    // this was previously jumping straight from the last slide
-                    // to progress===1, skipping scale/gap/reveal entirely.
                     snapTo: (progress) => {
                         if (progress >= slidesFraction) return progress;
                         const stepSnaps = Array.from({ length: last }, (_, i) => i * stepSize);
@@ -206,8 +229,16 @@ export default function Phase2() {
             </div>
 
             <div id="phase2-content" ref={contentRef} className="bg-black relative z-10 w-full min-h-screen">
-                <div className="relative flex items-center justify-between px-20 pt-12 text-neutral-500 text-[11px] font-dm-mono">
-                    <div>
+                <div
+                    className="relative flex flex-row items-center sm:justify-between gap-3 sm:gap-0 text-center sm:text-left text-neutral-500 font-dm-mono"
+                    style={{
+                        paddingLeft: HEADER_PADDING_X,
+                        paddingRight: HEADER_PADDING_X,
+                        paddingTop: HEADER_PADDING_TOP,
+                        fontSize: HEADER_FONT_SIZE,
+                    }}
+                >
+                    <div className="hidden sm:block">
                         <p>
                             Looking for your next
                             <br />
@@ -215,26 +246,35 @@ export default function Phase2() {
                         </p>
                     </div>
 
-                    <div className="absolute left-1/2 -translate-x-1/2">
+                    <div className="m-auto translate-y-5 sm:translate-y-0  static sm:absolute sm:left-1/2 sm:-translate-x-1/2">
                         Orbition Creative
                     </div>
 
-                    <div>We Are here to help {":)"}</div>
+                    <div className="hidden sm:block">We Are here to help {":)"}</div>
                 </div>
 
-                <div className="w-[547px] h-[142px] absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 overflow-hidden">
-                    <div ref={trackRef} className="flex flex-col gap-2 font-founders-power">
+                <div
+                    className="absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 overflow-hidden"
+                    style={{ width: CONTENT_WIDTH, height: CONTENT_HEIGHT }}
+                >
+                    <div
+                        ref={trackRef}
+                        className="flex flex-col font-founders-power"
+                        style={{ gap: TRACK_GAP }}
+                    >
                         {slideContent.map((slide, i) => (
                             <div
                                 key={i}
                                 ref={(el) => (slideRefs.current[i] = el)}
-                                className="h-[142px] flex items-center justify-center text-white text-center text-[120px] leading-none"
+                                className="flex items-center justify-center text-white text-center leading-none"
+                                style={{ height: CONTENT_HEIGHT, fontSize: SLIDE_FONT_SIZE }}
                             >
                                 {slide.text || (
                                     <img
-                                        className="w-[90px] object-contain"
+                                        className="object-contain"
                                         src={slide.image}
                                         alt={`Slide ${i + 1}`}
+                                        style={{ width: LOGO_WIDTH }}
                                     />
                                 )}
                             </div>
