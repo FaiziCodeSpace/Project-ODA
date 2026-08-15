@@ -167,7 +167,6 @@ export default function Phase7() {
                     willChange: 'transform, opacity',
                 });
 
-
                 const tl = gsap.timeline({
                     scrollTrigger: {
                         trigger: sectionRef.current,
@@ -179,7 +178,15 @@ export default function Phase7() {
                         invalidateOnRefresh: true,
                         fastScrollEnd: true, // still useful as a safety net for very fast flicks
                         snap: {
-                            snapTo: 'labels',
+                            snapTo: (progress) => {
+                                const total = tl.duration();
+                                const targets = ['fadeStart', 'scaleStart', 'scaleEnd', 'end'].map(
+                                    (label) => tl.labels[label] / total
+                                );
+                                return targets.reduce((closest, t) =>
+                                    Math.abs(t - progress) < Math.abs(closest - progress) ? t : closest
+                                );
+                            },
                             duration: { min: 0.2, max: 0.6 },
                             delay: 0.1,
                             ease: 'power1.inOut',
@@ -198,12 +205,13 @@ export default function Phase7() {
 
                 tl.addLabel('start');
 
-                // NEW: idle buffer sitting right at the pin boundary. Wrapper is still
+                // Idle buffer sitting right at the pin boundary. Wrapper is still
                 // opacity:0 here (from the initial gsap.set), so nothing is visually
                 // different on forward scroll — but on reverse scroll this buffer is the
                 // LAST thing to play before the raw scroll crosses the unpin boundary,
                 // giving the scrub-lagged opacity tween real time to finish reaching 0
-                // before the pin actually releases.
+                // before the pin actually releases. It is intentionally NOT a snap target
+                // (see snapTo above) so forward scroll can't get pulled back into it.
                 tl.to({}, {
                     duration: 300,
                 });
