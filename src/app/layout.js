@@ -19,6 +19,10 @@ export default function RootLayout({ children }) {
       lang="en"
       className={`${foundersGrotesk.variable} ${foundersGroteskCond.variable} ${foundersGroteskXCond.variable} ${powerGrotesk.variable} ${dmMono.variable} h-full antialiased`}
     >
+      <head>
+        <link rel="preload" as="image" href="/images/astro/astronaut.webp" />
+        <link rel="preload" as="image" href="/images/astro/rock.png" />
+      </head>
       <body className="min-h-full flex flex-col">
         <LenisProvider>{children}</LenisProvider>
       </body>
