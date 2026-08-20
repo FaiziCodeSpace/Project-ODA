@@ -177,20 +177,7 @@ export default function Phase7() {
                         anticipatePin: 1,
                         invalidateOnRefresh: true,
                         fastScrollEnd: true, // still useful as a safety net for very fast flicks
-                        snap: {
-                            snapTo: (progress) => {
-                                const total = tl.duration();
-                                const targets = ['fadeStart', 'scaleStart', 'scaleEnd', 'end'].map(
-                                    (label) => tl.labels[label] / total
-                                );
-                                return targets.reduce((closest, t) =>
-                                    Math.abs(t - progress) < Math.abs(closest - progress) ? t : closest
-                                );
-                            },
-                            duration: { min: 0.2, max: 0.6 },
-                            delay: 0.1,
-                            ease: 'power1.inOut',
-                        },
+                    
                     },
                     onStart: () => {
                         gsap.set(wrapperRef.current, { willChange: 'transform, opacity' });

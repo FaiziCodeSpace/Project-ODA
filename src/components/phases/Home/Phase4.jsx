@@ -48,7 +48,7 @@ export default function Phase4() {
             {/* Squares */}
             <div className="flex flex-col lg:flex-row gap-4 lg:gap-2 font-power">
                 <div className="relative flex flex-col justify-between overflow-hidden w-full lg:w-[65%] min-h-[420px] sm:min-h-[480px] lg:h-[538px] rounded-[16px] bg-[#FFFFFF] p-6 sm:p-8 lg:px-11 lg:py-7">
-                    <img ref={unionRef} className="absolute -top-16 -right-16 sm:-top-20 sm:-right-20 lg:-top-25 lg:-right-25 w-48 sm:w-64 lg:w-auto" src="/svgs/Union.svg" alt="" />
+                    <img ref={unionRef} className="absolute -top-16 -right-16 sm:-top-20 sm:-right-20 lg:-top-43 lg:-right-43 w-48 sm:w-64 lg:w-auto" src="/svgs/Union.svg" alt="" />
                     <p className="text-lg sm:text-[20px] relative z-10">About Us</p>
                     <div className="flex flex-col gap-[15px] relative z-10">
                         <div className="flex w-10 h-10 sm:w-12 sm:h-12 bg-[#151515] rounded-[4px]">

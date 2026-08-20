@@ -7,6 +7,7 @@ import Phase4 from "../phases/Home/Phase4";
 import Phase5 from "../phases/Home/Phase5";
 import Phase6 from "../phases/Home/Phase6";
 import Phase7 from "../phases/Home/Phase7";
+import Phase8 from "../phases/Home/Phase8";
 
 export function Hero() {
     return (
@@ -17,6 +18,7 @@ export function Hero() {
             <Phase5/>
             <Phase6/>
             <Phase7/>
+            <Phase8/>
         </main>
     );
 }

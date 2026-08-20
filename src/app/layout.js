@@ -6,6 +6,7 @@ import {
   foundersGroteskXCond,
   powerGrotesk,
   dmMono,
+  interTight
 } from "@/lib/fonts";
 
 export const metadata = {
@@ -17,7 +18,7 @@ export default function RootLayout({ children }) {
   return (
     <html
       lang="en"
-      className={`${foundersGrotesk.variable} ${foundersGroteskCond.variable} ${foundersGroteskXCond.variable} ${powerGrotesk.variable} ${dmMono.variable} h-full antialiased`}
+      className={`${foundersGrotesk.variable} ${foundersGroteskCond.variable} ${foundersGroteskXCond.variable} ${powerGrotesk.variable} ${dmMono.variable} ${interTight.variable} h-full antialiased`}
     >
       <head>
         <link rel="preload" as="image" href="/images/astro/astronaut.webp" />

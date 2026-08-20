@@ -1,5 +1,5 @@
 import localFont from "next/font/local";
-import { DM_Mono } from "next/font/google";
+import { DM_Mono, Inter_Tight } from "next/font/google";
 
 export const foundersGrotesk = localFont({
   src: [
@@ -96,5 +96,13 @@ export const dmMono = DM_Mono({
   weight: ["300", "400", "500"],
   style: ["normal", "italic"],
   variable: "--font-dm-mono",
+  display: "swap",
+});
+
+export const interTight = Inter_Tight({
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700"],
+  style: ["normal", "italic"],
+  variable: "--font-inter-tight",
   display: "swap",
 });
