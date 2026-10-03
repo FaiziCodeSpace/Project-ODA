@@ -1,5 +1,6 @@
 import "./globals.css";
 import LenisProvider from "@/providers/LenisProvider";
+import Loader from "@/components/animations/Loader";
 import {
   foundersGrotesk,
   foundersGroteskCond,
@@ -25,6 +26,7 @@ export default function RootLayout({ children }) {
         <link rel="preload" as="image" href="/images/astro/rock.png" />
       </head>
       <body className="min-h-full flex flex-col">
+        <Loader />
         <LenisProvider>{children}</LenisProvider>
       </body>
     </html>

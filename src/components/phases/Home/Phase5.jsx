@@ -2,10 +2,12 @@
 
 import { useRef, useLayoutEffect, useEffect, useState, useCallback, useMemo } from "react";
 import gsap from "gsap";
-
+import { ScrollTrigger } from "gsap/ScrollTrigger"
 const AUTOPLAY_MS = 3000;
 const COPIES = 4;
 const ASPECT = 351 / 306;
+
+gsap.registerPlugin(ScrollTrigger)
 
 const baseSlides = [
     { id: "[01]", icon: "/svgs/webdesign&development.svg", title: "Website Design & Development" },
@@ -102,6 +104,7 @@ export default function Phase5() {
                 dragRef.current = null;
                 isAnimating.current = false;
             }
+            ScrollTrigger.refresh();
         };
 
         measure();

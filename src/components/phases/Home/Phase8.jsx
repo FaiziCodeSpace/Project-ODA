@@ -1,12 +1,14 @@
 "use client"
+import { useEffect, useRef } from "react";
+import gsap from '@/lib/gsap/gsapConfig';
 
-import { useEffect, useRef } from "react"
-import gsap from "gsap"
-import { ScrollTrigger } from "gsap/ScrollTrigger"
+import { ScrollTrigger } from "gsap/ScrollTrigger";
 
 gsap.registerPlugin(ScrollTrigger)
 
 export default function Phase8() {
+    const cardRefs = useRef([]);
+
     const cards = [
         { name: "Project 1", img: "/images/cards/1.png" },
         { name: "Project 2", img: "/images/cards/2.png" },
@@ -14,36 +16,36 @@ export default function Phase8() {
         { name: "Project 4", img: "/images/cards/4.png" },
     ]
 
-    const sectionRef = useRef(null)
-    const cardRefs = useRef([])
-
     useEffect(() => {
-        const ctx = gsap.context(() => {
-            cardRefs.current.forEach((card) => {
-                gsap.fromTo(
-                    card,
-                    { y: 120, opacity: 0 },
-                    {
-                        y: 0,
-                        opacity: 1,
-                        duration: 1.2,
-                        ease: "power3.out",
-                        force3D: true,
-                        scrollTrigger: {
-                            trigger: card,
-                            start: "top 85%",
-                            toggleActions: "play none none reverse",
-                        },
-                    }
-                )
-            })
-        }, sectionRef)
+    const ctx = gsap.context(() => {
+        cardRefs.current.filter(Boolean).forEach((card) => {
+            gsap.fromTo(
+                card,
+                {
+                    y: 120,
+                    opacity: 0,
+                },
+                {
+                    y: 0,
+                    opacity: 1,
+                    duration: 1.2,
+                    ease: 'power3.out',
+                    scrollTrigger: {
+                        trigger: card,
+                        start: 'top 85%',
+                        toggleActions: 'play none none reverse',
+                        markers: true,
+                    },
+                }
+            );
+        });
+    });
 
-        return () => ctx.revert()
-    }, [])
+    return () => ctx.revert();
+}, []);
 
     return (
-        <section ref={sectionRef} className="relative overflow-x-hidden">
+        <section className="relative overflow-x-hidden">
             <svg className="absolute w-0 h-0">
                 <filter
                     id="displacementFilter"
@@ -51,7 +53,7 @@ export default function Phase8() {
                     y="-15%"
                     width="130%"
                     height="130%"
-                    color-interpolation-filters="sRGB"
+                    colorInterpolationFilters="sRGB"
                 >
                     <feTurbulence type="turbulence" baseFrequency="0.01" numOctaves="1" result="turbulence" />
                     <feGaussianBlur in="turbulence" stdDeviation="2" result="smoothTurbulence" />
@@ -98,11 +100,11 @@ export default function Phase8() {
                     const isEven = index % 2 === 0
                     return (
                         <div key={index} className={`flex ${isEven ? "justify-start" : "justify-end"} mt-20`}>
-                            <div
-                                ref={(el) => (cardRefs.current[index] = el)}
-                                className="liquid-glass-shadow w-fit"
-                            >
-                                <div className="liquid-glass-card">
+                            <div className="liquid-glass-shadow w-fit">
+                                <div
+                                    ref={(el) => (cardRefs.current[index] = el)}
+                                    className="liquid-glass-card"
+                                >
                                     <div className="flex flex-col gap-[30px] relative z-10 p-[35px]">
                                         <img className=" w-[751px] h-[655px]" src={card.img} alt={card.name} />
                                         <div className="flex justify-between items-start">
